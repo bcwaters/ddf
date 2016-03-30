@@ -41,6 +41,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +59,7 @@ import org.junit.Rule;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption;
 import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.metatype.MetaTypeService;
 import org.slf4j.Logger;
@@ -562,6 +566,31 @@ public abstract class AbstractIntegrationTest {
         tempFile.deleteOnExit();
         FileUtils.copyInputStreamToFile(resourceInputStream, tempFile);
         return replaceConfigurationFile(destination, tempFile);
+    }
+
+    /**
+     * Turns off all logging.
+     *
+     * @throws IOException
+     */
+    public void turnOffLogging() throws IOException {
+        Configuration logConfig = configAdmin.getConfiguration(LOG_CONFIG_PID, null);
+        Dictionary<String, Object> properties = logConfig.getProperties();
+        Enumeration<String> keys = logConfig.getProperties()
+                .keys();
+
+        List<String> logLevels = Arrays.asList("INFO", "DEBUG", "WARN", "TRACE", "ERROR");
+        for (String key : Collections.list(keys)) {
+            for (String logLevel : logLevels) {
+                if (properties.get(key)
+                        .toString()
+                        .contains(logLevel)) {
+                    properties.remove(key);
+                    break;
+                }
+            }
+        }
+        logConfig.update(properties);
     }
 
     /**
