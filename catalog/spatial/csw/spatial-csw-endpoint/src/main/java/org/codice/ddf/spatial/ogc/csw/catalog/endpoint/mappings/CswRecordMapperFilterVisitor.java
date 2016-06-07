@@ -1,10 +1,10 @@
 /**
  * Copyright (c) Codice Foundation
- * <p/>
+ * <p>
  * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser
  * General Public License as published by the Free Software Foundation, either version 3 of the
  * License, or any later version.
- * <p/>
+ * <p>
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details. A copy of the GNU Lesser General Public License
@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswRecordMetacardType;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.GmdMetacardType;
+import org.codice.ddf.spatial.ogc.csw.catalog.common.PropertyIsFuzzyFunction;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.converter.DefaultCswRecordMap;
 import org.codice.ddf.spatial.ogc.csw.catalog.converter.CswRecordConverter;
 import org.geotools.filter.FilterFactoryImpl;
@@ -56,6 +57,7 @@ import org.xml.sax.helpers.NamespaceSupport;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.BasicTypes;
+import ddf.catalog.filter.FilterBuilder;
 import ddf.measure.Distance;
 import ddf.measure.Distance.LinearUnit;
 
@@ -70,6 +72,8 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
 
     protected static final FilterFactory FILTER_FACTORY = new FilterFactoryImpl();
 
+    protected static FilterBuilder filterBuilder;
+
     protected static final String SPATIAL_QUERY_TAG = "spatialQueryExtraData";
 
     private static final Logger LOGGER =
@@ -78,6 +82,10 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
     private List<String> sourceIds = new ArrayList<>();
 
     private Filter visitedFilter;
+
+    public CswRecordMapperFilterVisitor(FilterBuilder builder) {
+        filterBuilder = builder;
+    }
 
     public List<String> getSourceIds() {
         return sourceIds;
@@ -168,6 +176,10 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
 
     @Override
     public Object visit(PropertyIsEqualTo filter, Object extraData) {
+        if (filter.getExpression1() instanceof PropertyIsFuzzyFunction) {
+            return visit((PropertyIsFuzzyFunction) filter.getExpression1(), extraData);
+        }
+
         if (StringUtils.equals(Metacard.SOURCE_ID,
                 ((PropertyName) filter.getExpression1()).getPropertyName())) {
             sourceIds.add((String) ((Literal) filter.getExpression2()).getValue());
@@ -177,6 +189,17 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
         Expression expr2 = visit(filter.getExpression2(), expr1);
         boolean matchCase = filter.isMatchingCase();
         return getFactory(extraData).equal(expr1, expr2, matchCase);
+    }
+
+    public Object visit(PropertyIsFuzzyFunction filter, Object extraData) {
+
+        Expression propertyName = visit(filter.getPropertyName(), extraData);
+        Expression literal = visit(filter.getLiteral(), extraData);
+
+        return filterBuilder.attribute(propertyName.toString())
+                .is()
+                .like()
+                .fuzzyText(literal.toString());
     }
 
     @Override
@@ -402,3 +425,4 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
         return (Expression) expression.accept(this, extraData);
     }
 }
+

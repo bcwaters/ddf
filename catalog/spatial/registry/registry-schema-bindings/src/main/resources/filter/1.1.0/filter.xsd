@@ -1,10 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xsd:schema xmlns:ogc="http://www.opengis.net/ogc"
-            xmlns:gml="http://www.opengis.net/gml"
-            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-            targetNamespace="http://www.opengis.net/ogc"
-            elementFormDefault="qualified"
-            version="1.1.0">
+<!--
+Copyright © 1994-2012 Open Geospatial Consortium, Inc.
+-->
+<!--
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details. A copy of the GNU Lesser General Public License
+ * is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ *
+ * line 236: Added mixed="true" to the complexType DistanceType to allow
+ * content (the actual distance text node) to be set.
+ **/
+-->
+<xsd:schema targetNamespace="http://www.opengis.net/ogc"
+   xmlns:ogc="http://www.opengis.net/ogc"
+   xmlns:gml="http://www.opengis.net/gml"
+   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+   elementFormDefault="qualified"
+   version="1.1.0">
 
    <xsd:include schemaLocation="expr.xsd"/>
    <xsd:include schemaLocation="sort.xsd"/>
@@ -54,6 +75,9 @@
                 substitutionGroup="ogc:comparisonOps"/>
    <xsd:element name="PropertyIsLike"
                 type="ogc:PropertyIsLikeType"
+                substitutionGroup="ogc:comparisonOps"/>
+   <xsd:element name="PropertyIsFuzzy"
+                type="ogc:PropertyIsFuzzyType"
                 substitutionGroup="ogc:comparisonOps"/>
    <xsd:element name="PropertyIsNull"
                 type="ogc:PropertyIsNullType"
@@ -144,6 +168,17 @@
             <xsd:attribute name="wildCard" type="xsd:string" use="required"/>
             <xsd:attribute name="singleChar" type="xsd:string" use="required"/>
             <xsd:attribute name="escapeChar" type="xsd:string" use="required"/>
+            <xsd:attribute name="matchCase" type="xsd:boolean" use="optional" default="true"/>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+   <xsd:complexType name="PropertyIsFuzzyType">
+      <xsd:complexContent>
+         <xsd:extension base="ogc:ComparisonOpsType">
+            <xsd:sequence>
+               <xsd:element ref="ogc:PropertyName"/>
+               <xsd:element ref="ogc:Literal"/>
+            </xsd:sequence>
          </xsd:extension>
       </xsd:complexContent>
    </xsd:complexType>
@@ -211,7 +246,11 @@
          </xsd:extension>
       </xsd:complexContent>
    </xsd:complexType>
-   <xsd:complexType name="DistanceType">
+   <!-- 
+   Added mixed="true" to the complexType DistanceType to allow 
+   content (the actual distance text node) to be set.  
+   -->
+   <xsd:complexType name="DistanceType"  mixed="true">
       <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>
    <xsd:complexType name="BinaryLogicOpType">
