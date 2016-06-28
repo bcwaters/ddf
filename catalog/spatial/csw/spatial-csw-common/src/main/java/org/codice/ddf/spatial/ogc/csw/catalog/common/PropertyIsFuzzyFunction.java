@@ -23,6 +23,11 @@ import org.opengis.filter.expression.Literal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The PropertyIsFuzzyFunction contains two parameters that can be used to build a
+ * {@link org.opengis.filter.PropertyIsLike} filter marked to be searched in a fuzzy manner.
+ * Built with the {@link org.codice.ddf.spatial.ogc.csw.catalog.common.CustomFunctionFactory}
+ */
 public class PropertyIsFuzzyFunction extends FunctionExpressionImpl {
     public static final String FUNCTION_NAME = "PropertyIsFuzzy";
 
@@ -35,18 +40,11 @@ public class PropertyIsFuzzyFunction extends FunctionExpressionImpl {
     public PropertyIsFuzzyFunction(List<Expression> parameters, Literal fallback) {
         super(FUNCTION_NAME, fallback);
 
-        LOGGER.debug("INSIDE: FuzzyFunction constructor");
-
-        if (parameters == null) {
-            throw new NullPointerException("parameters required");
-        }
-        if (parameters.size() != 2) {
+        if (parameters == null || parameters.size() != 2) {
             throw new IllegalArgumentException("PropertyIsFuzzy requires 2 parameters");
         }
         this.params = parameters;
         this.functionName = NAME;
-
-        LOGGER.debug("EXITING: FuzzyFunction constructor");
     }
 
     public Expression getPropertyName() {
@@ -55,6 +53,20 @@ public class PropertyIsFuzzyFunction extends FunctionExpressionImpl {
 
     public Expression getLiteral() {
         return params.get(1);
+    }
+
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
+
+    //findbugs: parent class overrides equals() but not hashcode
+    public int hashCode() {
+
+        return 31 * (this.getPropertyName()
+                .toString()
+                .hashCode() + this.getLiteral()
+                .toString()
+                .hashCode()) + 17;
     }
 
 }

@@ -15,6 +15,7 @@ package org.codice.ddf.spatial.ogc.csw.catalog.endpoint.mappings;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +24,6 @@ import org.apache.commons.lang.StringUtils;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswRecordMetacardType;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.GmdMetacardType;
-import org.codice.ddf.spatial.ogc.csw.catalog.common.PropertyIsFuzzyFunction;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.converter.DefaultCswRecordMap;
 import org.codice.ddf.spatial.ogc.csw.catalog.converter.CswRecordConverter;
 import org.geotools.filter.FilterFactoryImpl;
@@ -44,6 +44,7 @@ import org.opengis.filter.PropertyIsLessThan;
 import org.opengis.filter.PropertyIsLessThanOrEqualTo;
 import org.opengis.filter.PropertyIsNotEqualTo;
 import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.Function;
 import org.opengis.filter.expression.Literal;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.filter.spatial.BBOX;
@@ -57,7 +58,7 @@ import org.xml.sax.helpers.NamespaceSupport;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.BasicTypes;
-import ddf.catalog.filter.FilterBuilder;
+import ddf.catalog.impl.filter.FuzzyFunction;
 import ddf.measure.Distance;
 import ddf.measure.Distance.LinearUnit;
 
@@ -72,8 +73,6 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
 
     protected static final FilterFactory FILTER_FACTORY = new FilterFactoryImpl();
 
-    protected static FilterBuilder filterBuilder;
-
     protected static final String SPATIAL_QUERY_TAG = "spatialQueryExtraData";
 
     private static final Logger LOGGER =
@@ -82,10 +81,6 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
     private List<String> sourceIds = new ArrayList<>();
 
     private Filter visitedFilter;
-
-    public CswRecordMapperFilterVisitor(FilterBuilder builder) {
-        filterBuilder = builder;
-    }
 
     public List<String> getSourceIds() {
         return sourceIds;
@@ -176,10 +171,6 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
 
     @Override
     public Object visit(PropertyIsEqualTo filter, Object extraData) {
-        if (filter.getExpression1() instanceof PropertyIsFuzzyFunction) {
-            return visit((PropertyIsFuzzyFunction) filter.getExpression1(), extraData);
-        }
-
         if (StringUtils.equals(Metacard.SOURCE_ID,
                 ((PropertyName) filter.getExpression1()).getPropertyName())) {
             sourceIds.add((String) ((Literal) filter.getExpression2()).getValue());
@@ -189,17 +180,6 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
         Expression expr2 = visit(filter.getExpression2(), expr1);
         boolean matchCase = filter.isMatchingCase();
         return getFactory(extraData).equal(expr1, expr2, matchCase);
-    }
-
-    public Object visit(PropertyIsFuzzyFunction filter, Object extraData) {
-
-        Expression propertyName = visit(filter.getPropertyName(), extraData);
-        Expression literal = visit(filter.getLiteral(), extraData);
-
-        return filterBuilder.attribute(propertyName.toString())
-                .is()
-                .like()
-                .fuzzyText(literal.toString());
     }
 
     @Override
@@ -423,6 +403,19 @@ public class CswRecordMapperFilterVisitor extends DuplicatingFilterVisitor {
             return null;
         }
         return (Expression) expression.accept(this, extraData);
+    }
+
+    @Override
+    public Object visit(Function function, Object extraData) {
+
+        if (function instanceof FuzzyFunction){
+            //FuzzyFunction has 1 parameter to visit
+            Expression expr1 = visit(function.getParameters().get(0), null);
+            ((FuzzyFunction) function).setParameters(Arrays.asList(expr1));
+            return function;
+        } else {
+            return super.visit(function, extraData);
+        }
     }
 }
 

@@ -31,7 +31,6 @@ import javax.xml.namespace.QName;
 
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswRecordMetacardType;
-import org.codice.ddf.spatial.ogc.csw.catalog.common.PropertyIsFuzzyFunction;
 import org.geotools.feature.NameImpl;
 import org.geotools.filter.AttributeExpressionImpl;
 import org.geotools.filter.FilterFactoryImpl;
@@ -93,12 +92,12 @@ public class TestCswRecordMapperFilterVisitor {
                         Metacard.CREATED,
                         CswConstants.DUBLIN_CORE_NAMESPACE_PREFIX)));
 
-        visitor = new CswRecordMapperFilterVisitor(new GeotoolsFilterBuilder());
+        visitor = new CswRecordMapperFilterVisitor();
     }
 
     @Test
     public void testVisitWithUnmappedName() {
-        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor(new GeotoolsFilterBuilder());
+        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor();
 
         PropertyName propertyName = (PropertyName) visitor.visit(attrExpr, null);
 
@@ -111,7 +110,7 @@ public class TestCswRecordMapperFilterVisitor {
                 CswConstants.DUBLIN_CORE_SCHEMA,
                 CswRecordMetacardType.OWS_BOUNDING_BOX,
                 CswConstants.DUBLIN_CORE_NAMESPACE_PREFIX)));
-        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor(new GeotoolsFilterBuilder());
+        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor();
 
         PropertyName propertyName = (PropertyName) visitor.visit(propName, null);
 
@@ -125,7 +124,7 @@ public class TestCswRecordMapperFilterVisitor {
                 CswRecordMetacardType.CSW_ALTERNATIVE,
                 CswConstants.DUBLIN_CORE_NAMESPACE_PREFIX)));
 
-        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor(new GeotoolsFilterBuilder());
+        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor();
 
         PropertyName propertyName = (PropertyName) visitor.visit(propName, null);
 
@@ -218,20 +217,20 @@ public class TestCswRecordMapperFilterVisitor {
 
     @Test
     public void testVisitPropertyIsFuzzy() {
-        visitor = new CswRecordMapperFilterVisitor(new GeotoolsFilterBuilder());
+        visitor = new CswRecordMapperFilterVisitor();
         Expression val1 = factory.property("fooProperty");
         Expression val2 = factory.literal("fooLiteral");
 
-        ArrayList<Expression> parameters = new ArrayList<>();
-        parameters.add(val1);
-        parameters.add(val2);
-
         //PropertyIsFuzzy maps to a propertyIsLike filter with a fuzzy function
-        PropertyIsFuzzyFunction filter = new PropertyIsFuzzyFunction(parameters, null);
-        PropertyIsLike duplicate = (PropertyIsLike) visitor.visit(filter, null);
+        GeotoolsFilterBuilder builder = new GeotoolsFilterBuilder();
+        PropertyIsLike fuzzySearch = (PropertyIsLike) builder.attribute(val1.toString())
+                .is()
+                .like()
+                .fuzzyText(val2.toString());
+        PropertyIsLike visitedFilter = (PropertyIsLike) visitor.visit(fuzzySearch, null);
 
-        assertTrue(duplicate.getExpression() instanceof FuzzyFunction);
-        assertThat(duplicate.getLiteral(), equalTo(val2.toString()));
+        assertTrue(visitedFilter.getExpression() instanceof FuzzyFunction);
+        assertThat(visitedFilter.getLiteral(), equalTo(val2.toString()));
     }
 
     @Test

@@ -33,10 +33,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.cxf.common.util.CollectionUtils;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswConstants;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.CswException;
+import org.codice.ddf.spatial.ogc.csw.catalog.common.PropertyIsFuzzyFunction;
 import org.codice.ddf.spatial.ogc.csw.catalog.common.converter.DefaultCswRecordMap;
 import org.codice.ddf.spatial.ogc.csw.catalog.endpoint.mappings.CswRecordMapperFilterVisitor;
 import org.geotools.feature.NameImpl;
 import org.geotools.filter.AttributeExpressionImpl;
+import org.geotools.filter.IsEqualsToImpl;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.xml.Configuration;
@@ -147,7 +149,7 @@ public class CswQueryFactory {
 
     private CswRecordMapperFilterVisitor buildFilter(QueryConstraintType constraint)
             throws CswException {
-        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor(builder);
+        CswRecordMapperFilterVisitor visitor = new CswRecordMapperFilterVisitor();
         Filter filter = null;
         if (constraint != null) {
             if (constraint.isSetCqlText()) {
@@ -175,6 +177,8 @@ public class CswQueryFactory {
                     null);
         }
 
+        filter = transformCustomFunctionToFilter(filter);
+
         try {
             visitor.setVisitedFilter((Filter) filter.accept(visitor, null));
         } catch (UnsupportedOperationException ose) {
@@ -182,6 +186,24 @@ public class CswQueryFactory {
         }
 
         return visitor;
+    }
+
+    private Filter transformCustomFunctionToFilter(Filter filter) {
+        if (filter instanceof IsEqualsToImpl
+                && ((IsEqualsToImpl) filter).getExpression1() instanceof PropertyIsFuzzyFunction) {
+
+            PropertyIsFuzzyFunction fuzzyProperty =
+                    (PropertyIsFuzzyFunction) ((IsEqualsToImpl) filter).getExpression1();
+
+            return builder.attribute(fuzzyProperty.getPropertyName()
+                    .toString())
+                    .is()
+                    .like()
+                    .fuzzyText(fuzzyProperty.getLiteral()
+                            .toString());
+        }
+
+        return filter;
     }
 
     private SortBy buildSort(SortByType sort) throws CswException {

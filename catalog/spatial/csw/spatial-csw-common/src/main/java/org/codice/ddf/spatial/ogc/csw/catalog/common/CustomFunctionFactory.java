@@ -13,7 +13,6 @@
  */
 package org.codice.ddf.spatial.ogc.csw.catalog.common;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,41 +26,30 @@ import org.opengis.filter.expression.Literal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The CustomFunctionFactory is used to provide the GeoTools CommonFactoryFinder a list of custom
+ * functions.  This allows for DDF to extend the OGC Filter 1.1.0 schema and still let GeoTools
+ * parse the request.
+ * GeoTools CommonFactoryFinder uses a service loader
+ */
 public class CustomFunctionFactory implements FunctionFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(CustomFunctionFactory.class);
 
     public List<FunctionName> getFunctionNames() {
-        String methodName = "getFunctionNames";
-        LOGGER.debug("ENTERING: {}", methodName);
-
-        List<FunctionName> functionList = new ArrayList<FunctionName>();
-        functionList.add(PropertyIsFuzzyFunction.NAME);
-
-        LOGGER.debug("EXITING: {}", methodName);
-
-        return Collections.unmodifiableList(functionList);
+        return Collections.singletonList(PropertyIsFuzzyFunction.NAME);
     }
 
     public Function function(String name, List<Expression> args, Literal fallback) {
-        LOGGER.debug("INSIDE: function(String name, ...)");
         return function(new NameImpl(name), args, fallback);
     }
 
     public Function function(Name name, List<Expression> args, Literal fallback) {
-        String methodName = "function";
-        LOGGER.debug("ENTERING: {}", methodName);
-
-        LOGGER.debug("Comparing [{}] to [{}]",
-                PropertyIsFuzzyFunction.NAME.getName(),
-                name.getLocalPart());
 
         if (PropertyIsFuzzyFunction.NAME.getName()
                 .equals(name.getLocalPart())) {
-            LOGGER.debug("EXITING: {}    - returning FuzzyFunction instance", methodName);
+
             return new PropertyIsFuzzyFunction(args, fallback);
         }
-
-        LOGGER.debug("EXITING: {}    - returning null", methodName);
 
         return null; // we do not implement that function
     }
